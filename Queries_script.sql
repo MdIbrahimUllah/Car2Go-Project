@@ -1,0 +1,106 @@
+
+
+
+USE Car2Go
+GO
+
+
+
+/*
+1.) Display all the customers driver license number, first name and last anme as name, 
+street number, street name, apt.number, city, province and country as address, postal code and phone numbers as contact number. 
+*/
+
+SELECT CP.D_LICENSE_NUMBER, CONCAT(C.FIRST_NAME,' ',C.LAST_NAME) AS NAME, 
+CONCAT(C.APT_UNIT_NUM,'-',C.STREET_RURAL_NUMBER,' ',C.STREET_RURAL_NAME,' ',C.CITY, ' ', C.PROVINCE_STATE, ' ', C.COUNTRY) AS ADDRESS,
+C.POSTAL_CODE, C.COUNTRY, STRING_AGG(CONCAT(CP.COUNTRY_CODE,'-',CP.AREA_CODE,'-',CP.LOCAL_NUMBER),', ') AS CONTACT_NUMBER 
+FROM CUSTOMER_PHONE CP, CUSTOMER C 
+WHERE C.D_LICENSE_NUMBER = CP.D_LICENSE_NUMBER GROUP BY CP.D_LICENSE_NUMBER, C.FIRST_NAME, C.LAST_NAME, 
+C.APT_UNIT_NUM, C.STREET_RURAL_NAME, C.STREET_RURAL_NUMBER,C.CITY,C.PROVINCE_STATE,C.COUNTRY, C.POSTAL_CODE,C.COUNTRY; 
+
+
+
+/* 
+2.)Display all the vehicles VIN number make, model, year made, color and associated class names, 
+icluding their current locations with street number, street name, province and postal code as address 
+and also associated location phone numbers as branch phone number with available status.
+*/
+
+SELECT C.VIN_NUMBER, C.MAKE,C.MODEL, C.YEAR_MADE, C.COLOR, CL.CLASS_NAME, 
+CONCAT(LOC.STREET_RURAL_NUMBER,' ',LOC.UNIT_NUM,' ',LOC.STREET_RURAL_NAME,' ',LOC.PROVINCE_STATE,' ', LOC.POSTAL_CODE) AS ADDRESS,
+STRING_AGG(LOC_PH.PHONE_NUMBER, ', ')AS BRANCH_PHONE_NUMBER, CL.AVAILABILITY  
+FROM CAR C, CLASS CL, LOCATION LOC, LOCATION_PHONE LOC_PH 
+WHERE C.CLASS_ID = CL.CLASS_ID AND LOC.LOCATION_ID = C.LOCATION_ID AND C.LOCATION_ID = LOC_PH.LOCATION_ID 
+GROUP BY C.VIN_NUMBER, C.MAKE, C.MODEL, C.YEAR_MADE, C.COLOR, CL.CLASS_NAME, LOC_PH.LOCATION_ID, 
+LOC.STREET_RURAL_NUMBER, LOC.UNIT_NUM, LOC.STREET_RURAL_NAME, LOC.PROVINCE_STATE, LOC.POSTAL_CODE, CL.AVAILABILITY;
+
+
+
+/*
+--3.) Display all the rental informations for each customer including their driver license number, full name, rented car class,
+also milage used during each rent and number of days rented, including daily rental charge and total price before discount,
+discount rate for each applicable promotion, total amount of discount and the final amount to pay after promotion applied.
+*/
+
+SELECT D.D_LICENSE_NUMBER,CONCAT(C.FIRST_NAME,' ',C.LAST_NAME)AS RENTER,CL.CLASS_NAME AS RENTED_CAR_CLASS,
+R.ODOMETER_AFTER_RENT-ODOMETER_BEFORE_RENT AS ODOMETER_CONSUMPTION, R.RENTAL_DURATION AS RENTAL_DAYS, 
+CL.RENTAL_PRICE AS DAILY_CHARGE, (DATEDIFF(DAY, R.RENTAL_DATE,R.RETURN_DATE)*CL.RENTAL_PRICE) AS TOTAL_PRICE, P.DISCOUNT_RATE_PERCENT AS DISCOUNT_RATE,
+(DATEDIFF(DAY, R.RENTAL_DATE,R.RETURN_DATE)*CL.RENTAL_PRICE) - D.AMOUNT_DUE AS TOTAL_DISCOUNT, D.AMOUNT_DUE AS PAYMENT_DUE 
+FROM DROP_OFF_CHARGE D,RENTAL R, CUSTOMER C, CLASS CL, PROMOTION P 
+WHERE C.D_LICENSE_NUMBER = D.D_LICENSE_NUMBER AND D.RENTAL_ID = R.RENTAL_ID AND D.CLASS_ID = CL.CLASS_ID AND D.PROMOTION_ID = P.PROMOTION_ID;
+
+
+--4)Display all the customers driver license number, full name as customer, their rented car clss, and reservation dates.
+
+SELECT C.D_LICENSE_NUMBER,CONCAT(C.FIRST_NAME,' ',C.LAST_NAME) AS CUSTOMER, CL.CLASS_NAME, R.RESERVATION_DATE
+FROM RESERVATION R, CLASS CL, CUSTOMER C
+WHERE  CL.CLASS_ID=R.REQUESTED_CLASS_ID AND C.D_LICENSE_NUMBER=R.D_LICENSE_NUMBER
+GROUP BY  C.D_LICENSE_NUMBER,C.FIRST_NAME,C.LAST_NAME,CL.CLASS_NAME, R.RESERVATION_DATE;
+
+
+
+--5) Display each class name, discount rate, promotion start date, end date and days since promotion ended. 
+SELECT CL.CLASS_NAME, P.DISCOUNT_RATE_PERCENT, p.PROMOTION_START_DATE, P.PROMOTION_END_DATE, 
+DATEDIFF(DAY,P.PROMOTION_END_DATE, GETDATE()) AS DAYS_SINCE_PROMOTION_ENDED FROM CLASS CL, PROMOTION P WHERE CL.CLASS_ID = P.CLASS_ID;
+
+
+
+--6)DISPLAY MAKE, TOTAL NUMBER OF CAR FOR EACH MAKE.
+SELECT MAKE, COUNT(MAKE) AS TOTAL_NUMBER_OF_CAR FROM CAR GROUP BY MAKE ORDER BY MAKE DESC;
+
+
+
+--7.)Display all available COMPACT class cars .
+SELECT C.VIN_NUMBER, C.MAKE,C.MODEL,C.YEAR_MADE,C.COLOR,CL.CLASS_NAME,CL.AVAILABILITY 
+FROM CLASS CL, CAR C WHERE C.CLASS_ID = CL.CLASS_ID AND CLASS_NAME='COMPACTS' AND AVAILABILITY='YES';
+
+
+
+--8.) Display the VIN, make model, class name, year made, color for the car BMW.
+SELECT VIN_NUMBER,MAKE,MODEL,CLASS_NAME,YEAR_MADE, COLOR FROM CAR,CLASS WHERE CAR.CLASS_ID = CLASS.CLASS_ID AND MAKE = 'BMW' ;
+
+
+
+
+--9)Display the total number of cars company has.
+SELECT COUNT(VIN_NUMBER) AS TOTAL_NUMBER_OF_CARS FROM CAR;
+
+
+
+--10)Display the total number of locations of company in Montreal.
+SELECT COUNT(LOCATION_ID) AS TOTAL_BRANCHES FROM LOCATION WHERE CITY = 'Montreal';
+
+
+--11.) Display the two highest car rental price that company have.
+SELECT TOP(2) RENTAL_PRICE FROM CLASS ORDER BY RENTAL_PRICE DESC; 
+
+
+--12)Display the name of all classes  which ended with 'acts' and price in the range of 100 dollars.
+SELECT CLASS_NAME FROM CLASS WHERE CLASS_NAME LIKE '%acts' AND RENTAL_PRICE<=100;
+
+--13.) Display the maximum amount which is rented
+SELECT MAX(AMOUNT_DUE) AS MAXIMUM_RENT_PAID FROM DROP_OFF_CHARGE;
+
+
+
+
